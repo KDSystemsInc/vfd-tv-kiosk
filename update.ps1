@@ -53,8 +53,11 @@ try {
   Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue
   New-Item -ItemType Directory $tmp | Out-Null
   Fetch 'main/manifest.json' "$tmp/manifest.json"
-  Fetch 'main/manifest.sig' "$tmp/manifest.sig"
   $bytes = [IO.File]::ReadAllBytes("$tmp/manifest.json")
+  # Signature from the release tag the (not yet trusted) manifest names, so the pair always matches.
+  $claimed = ([Text.Encoding]::UTF8.GetString($bytes) | ConvertFrom-Json).version
+  if ($claimed -notmatch '^\d+(\.\d+){1,3}$') { throw "bad version in manifest: $claimed" }
+  Fetch "v$claimed/manifest.sig" "$tmp/manifest.sig"
   $sig = [Convert]::FromBase64String((Get-Content "$tmp/manifest.sig" -Raw).Trim())
   $rsa = [Security.Cryptography.RSA]::Create(); $rsa.FromXmlString($PubKey)
   if (-not $rsa.VerifyData($bytes, $sig, [Security.Cryptography.HashAlgorithmName]::SHA256, [Security.Cryptography.RSASignaturePadding]::Pkcs1)) {

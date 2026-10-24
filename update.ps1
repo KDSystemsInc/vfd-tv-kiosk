@@ -22,8 +22,12 @@ $Log = 'C:\Data\kds-update.log'
 
 function L($m) { $l = "$(Get-Date -Format 'MM/dd/yyyy HH:mm:ss')  $m"; $l; try { $l | Out-File $Log -Append -Encoding utf8 } catch {} }
 function Fetch($path, $out) {
-  # The query string skips GitHub's ~5 min raw cache, so a kiosk never installs the previous release right after a new one.
-  if ($Source -match '^https?://') { Invoke-WebRequest "$Source/${path}?t=$([DateTime]::UtcNow.Ticks)" -OutFile $out -UseBasicParsing -TimeoutSec 30 }
+  if ($Source -match '^https?://') {
+    # main/ files come from the API: raw.githubusercontent.com caches them ~5 min (a query string does not bypass it),
+    # which made a kiosk installed right after a release pick up the previous one. Tagged files never change, so raw is fine.
+    $url = if ($path -match '^main/(.+)$') { "https://api.github.com/repos/KDSystemsInc/vfd-tv-kiosk/contents/$($Matches[1])?ref=main" } else { "$Source/$path" }
+    Invoke-WebRequest $url -OutFile $out -UseBasicParsing -TimeoutSec 30 -Headers @{ Accept = 'application/vnd.github.raw'; 'User-Agent' = 'kds-kiosk-updater' }
+  }
   else { Copy-Item (Join-Path $Source $path) $out }
 }
 function Ensure-Task($name, $script, $every) {

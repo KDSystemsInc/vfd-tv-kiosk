@@ -1,0 +1,5 @@
+# Public repo: whitelist only. The deployment guide has plaintext passwords; never add it.
+*
+!.gitignore
+!README.md
+!bulletin-watchdog.ps1

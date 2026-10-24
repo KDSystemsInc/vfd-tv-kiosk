@@ -7,7 +7,7 @@
   own admin; removing it here could lock them out).
 #>
 param([switch]$Reboot)
-foreach ($t in 'KDS Kiosk Updater', 'RedNMX Bulletin Watchdog') {
+foreach ($t in 'KDS Kiosk Updater', 'RedNMX Bulletin Watchdog', 'KDS Roku Keep-Awake') {
   Unregister-ScheduledTask $t -Confirm:$false -ErrorAction SilentlyContinue
 }
 
@@ -21,7 +21,7 @@ Remove-Item 'C:\Data\start-bulletin.cmd', 'C:\Data\suspended.html' -ErrorAction 
 
 [pscustomobject]@{
   Shell        = $wesl.GetCustomShell($sid).Shell
-  TasksLeft    = @(Get-ScheduledTask -ErrorAction SilentlyContinue | Where-Object TaskName -in 'KDS Kiosk Updater', 'RedNMX Bulletin Watchdog').Count
+  TasksLeft    = @(Get-ScheduledTask -ErrorAction SilentlyContinue | Where-Object TaskName -in 'KDS Kiosk Updater', 'RedNMX Bulletin Watchdog', 'KDS Roku Keep-Awake').Count
   KDSFilesLeft = Test-Path 'C:\ProgramData\KDSystems'
 } | Format-List
 if ($Reboot) { Restart-Computer -Force } else { 'Offboarded. Reboot to apply.' }

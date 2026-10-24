@@ -81,6 +81,18 @@ try {
 if (-not (Test-Path "$Dir\start-bulletin.ps1")) { L 'no release installed yet'; return }
 Ensure-Task 'KDS Kiosk Updater' "$Dir\update.ps1" (New-TimeSpan -Hours 6)
 Ensure-Task 'RedNMX Bulletin Watchdog' "$Dir\bulletin-watchdog.ps1" (New-TimeSpan -Minutes 5)
+
+# Roku keep-awake, only on kiosks whose TV is a Roku: roku.txt holds the TV's IP (some TVs are Fire TVs).
+# Replace any hand-made task that ran C:\Data\roku-watch.ps1, carrying its -Roku IP over.
+foreach ($t in @(Get-ScheduledTask -ErrorAction SilentlyContinue | Where-Object { "$($_.Actions.Arguments)" -match 'C:\\Data\\roku-watch\.ps1' })) {
+  if (-not (Test-Path "$Dir\roku.txt") -and "$($t.Actions.Arguments)" -match '-Roku\s+"?([^"\s]+)') { Set-Content "$Dir\roku.txt" $Matches[1] }
+  Unregister-ScheduledTask $t.TaskName -Confirm:$false
+  L "replaced old Roku task: $($t.TaskName)"
+}
+if (Test-Path "$Dir\roku.txt") { Ensure-Task 'KDS Roku Keep-Awake' "$Dir\roku-watch.ps1" (New-TimeSpan -Minutes 5) }
+elseif (Get-ScheduledTask 'KDS Roku Keep-Awake' -ErrorAction SilentlyContinue) {
+  Unregister-ScheduledTask 'KDS Roku Keep-Awake' -Confirm:$false; L 'removed Roku task (no roku.txt)'
+}
 $want = "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$Dir\start-bulletin.ps1`""
 $sid = (Get-LocalUser Kiosk).SID.Value
 $wesl = [wmiclass]"\\localhost\root\standardcimv2\embedded:WESL_UserSetting"

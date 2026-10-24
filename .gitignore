@@ -3,3 +3,6 @@
 !.gitignore
 !README.md
 !bulletin-watchdog.ps1
+!start-bulletin.cmd
+!suspend.json
+!suspended.html

@@ -1,0 +1,4 @@
+{
+  "_comment": "Kiosks whose COMPUTERNAME is listed here show suspended.html instead of the Bulletin. Empty = all run. Edit on the main branch to toggle; kiosks pick it up within 5 min. DO NOT list a live dispatch-board machine.",
+  "suspended": []
+}

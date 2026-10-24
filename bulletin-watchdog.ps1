@@ -3,34 +3,18 @@
   Background: after a Wi-Fi flap on 10/18/2026, 14-TV logged "Could not connect" every 15 s for
   five days while port 1433 answered; only a process restart cleared it.
 
-  Install or update (elevated, per kiosk; set $v to the release tag):
-    $v='v1.0.0'; $f="$env:TEMP\bulletin-watchdog.ps1"; iwr "https://raw.githubusercontent.com/KDSystemsInc/vfd-tv-kiosk/$v/bulletin-watchdog.ps1" -OutFile $f -UseBasicParsing; powershell -ExecutionPolicy Bypass -File $f -Install
-  Copies itself to C:\ProgramData\KDSystems (C:\Data is user-writable and Syncthing-fed, so a
-  SYSTEM task must not run from there) and runs every 5 minutes as SYSTEM.
-  Actions are logged to C:\Data\bulletin-watchdog.log, which Syncthing carries to the NAS.
+  Installed and kept up to date by update.ps1; runs every 5 minutes as SYSTEM from
+  C:\ProgramData\KDSystems. Actions are logged to C:\Data\bulletin-watchdog.log, which Syncthing carries to the NAS.
 
   Dry run against any log:  pwsh bulletin-watchdog.ps1 -Log sample.log -Now '10/18/2026 17:40' -DryRun
 #>
 param(
   [string]$Log = 'C:\Data\RedNMXBulletin.log',
   [datetime]$Now = (Get-Date),
-  [switch]$DryRun,
-  [switch]$Install
+  [switch]$DryRun
 )
 $Db = 'ALPINESOFTWARE.DATABASE.WINDOWS.NET'
 $Out = 'C:\Data\bulletin-watchdog.log'
-
-if ($Install) {
-  $dir = 'C:\ProgramData\KDSystems'
-  New-Item -ItemType Directory -Force $dir | Out-Null
-  icacls $dir /inheritance:r /grant 'SYSTEM:(OI)(CI)F' 'Administrators:(OI)(CI)F' | Out-Null
-  Copy-Item $PSCommandPath "$dir\bulletin-watchdog.ps1" -Force
-  $a = New-ScheduledTaskAction -Execute powershell.exe -Argument "-NoProfile -ExecutionPolicy Bypass -File $dir\bulletin-watchdog.ps1"
-  $t = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Minutes 5)
-  Register-ScheduledTask -TaskName 'RedNMX Bulletin Watchdog' -Action $a -Trigger $t -User SYSTEM -RunLevel Highest -Force |
-    Select-Object TaskName, State
-  return
-}
 
 # Leave a just-started app alone: it may still be waiting on the network.
 $p = Get-Process RedNMXBulletin -ErrorAction SilentlyContinue

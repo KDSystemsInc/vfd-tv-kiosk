@@ -1,8 +1,14 @@
 # Public repo: whitelist only. The deployment guide has plaintext passwords; never add it.
 *
 !.gitignore
+!.gitattributes
 !README.md
+!release.sh
+!manifest.json
+!manifest.sig
+!update.ps1
 !bulletin-watchdog.ps1
-!start-bulletin.cmd
-!suspend.json
+!start-bulletin.ps1
 !suspended.html
+!suspend.json
+!offboard.ps1

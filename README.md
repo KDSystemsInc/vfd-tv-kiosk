@@ -1,51 +1,49 @@
 # vfd-tv-kiosk
 
-Deploy + control scripts for the RedNMX Bulletin TV kiosks.
+Scripts for the RedNMX Bulletin TV kiosks. Kiosks install signed releases automatically.
 
-- **bulletin-watchdog.ps1** — restarts the Bulletin if it stays stuck on "Could not connect"
-  for 7+ min while the DB port answers (the app does not recover from a mid-session Wi-Fi drop).
-- **start-bulletin.cmd** — the Shell Launcher wrapper: checks the suspend flag, waits for the
-  DB, then launches the Bulletin.
-- **suspend.json** — the remote off switch (see below).
-- **suspended.html** — the page shown while suspended.
+| File | What it does |
+|---|---|
+| `update.ps1` | Every 6 h as SYSTEM: installs a new release if its signature and hashes check out; otherwise keeps the current one. Also keeps the tasks and Shell Launcher entry in place. |
+| `start-bulletin.ps1` | Shell Launcher wrapper: suspend check, wait for the DB, run the Bulletin. |
+| `bulletin-watchdog.ps1` | Every 5 min: restarts the Bulletin if it is stuck on "Could not connect" while the DB answers. |
+| `suspend.json` / `suspended.html` | Remote suspend switch and the page it shows. |
+| `offboard.ps1` | Removes everything above and restores the stock Bulletin launch. |
+| `release.sh` | Signs and publishes a release (run on Kevin's Mac). |
 
-## Remote off switch
+Installed files live in `C:\ProgramData\KDSystems` (admin-only writes). Logs go to `C:\Data`
+(`kds-update.log`, `bulletin-watchdog.log`, `start-bulletin.log`) so Syncthing carries them to the NAS.
 
-`suspend.json` on the **main** branch lists kiosks (by Windows COMPUTERNAME) that should be
-suspended. A suspended kiosk shows `suspended.html` instead of the Bulletin and rechecks every
-5 minutes, so toggling is just an edit to that file:
+## Releasing
 
-```json
-{ "suspended": ["SOME-PC"] }
+```bash
+./release.sh 1.2.1
 ```
 
-Empty list = everything runs. **Fail-open by design:** if the kiosk cannot fetch the flag
-(GitHub down, no internet), it launches the Bulletin normally. The switch is nonpayment
-leverage, not DRM; someone with local access can defeat it, and that tradeoff is deliberate so
-an outage can never blank a board on its own.
+Writes `manifest.json` (version + SHA-256 of each file), signs it with the private key in the
+macOS Keychain (`kds-kiosk-signing`), tags, and pushes. Kiosks pick it up within 6 hours.
+Kiosks reject anything that key did not sign and never move to an older version. If a download or
+check fails they keep running what they have, so deleting files from this repo does not disable
+anything. To remove the software from a kiosk, run `offboard.ps1`.
 
-> **Safety:** never list a machine that shows the **live dispatch call board**. Firefighters use
-> that board to respond to active incidents. Suspend only informational boards (weather / history
-> / events). Find a machine's name with `$env:COMPUTERNAME`.
+## New kiosk (once, elevated PowerShell)
 
-## Install / update (elevated PowerShell, per kiosk)
+Use the bootstrap line `release.sh` prints. It checks the downloaded `update.ps1` against a pinned
+hash, installs, and registers the tasks. Reboot afterwards so Shell Launcher uses the new wrapper.
 
-Pin to a release tag. Re-run with a newer tag to update.
+## Suspend switch
+
+List a kiosk's `COMPUTERNAME` in `suspend.json` on `main` to show `suspended.html` instead of the
+Bulletin (picked up within 5 minutes). Fails open: if the flag can't be fetched, the Bulletin runs.
+
+> **Safety:** never list a machine that shows the **live dispatch call board**.
+
+## Offboarding
 
 ```powershell
-$v='v1.1.0'
-$b="https://raw.githubusercontent.com/KDSystemsInc/vfd-tv-kiosk/$v"
-foreach ($f in 'start-bulletin.cmd','suspended.html') { iwr "$b/$f" -OutFile "C:\Data\$f" -UseBasicParsing }
-iwr "$b/bulletin-watchdog.ps1" -OutFile "$env:TEMP\wd.ps1" -UseBasicParsing
-powershell -ExecutionPolicy Bypass -File "$env:TEMP\wd.ps1" -Install
+iwr https://raw.githubusercontent.com/KDSystemsInc/vfd-tv-kiosk/main/offboard.ps1 -OutFile $env:TEMP\offboard.ps1 -UseBasicParsing; powershell -ExecutionPolicy Bypass -File $env:TEMP\offboard.ps1 -Reboot
 ```
 
-Shell Launcher already points at `C:\Data\start-bulletin.cmd`, so no Shell Launcher change is
-needed. If Syncthing also feeds `C:\Data`, put the new `start-bulletin.cmd` / `suspended.html` on
-the NAS too, or stop syncing them, so Syncthing does not overwrite the installed copies.
-
-The **code** is pinned by tag; only `suspend.json` is read live from `main`.
-
-## Release
-
-Tag every change (`git tag v1.1.1 && git push --tags`) and install by tag, not `main`.
+Removes the updater and watchdog tasks, `C:\ProgramData\KDSystems` and the custom launcher, and
+points Shell Launcher back at `C:\Data\RedNMXBulletin.exe`. Leaves RedNMX, the Kiosk user,
+auto-logon and Syncthing alone. Hand over the KDSystems admin password as part of the handoff.

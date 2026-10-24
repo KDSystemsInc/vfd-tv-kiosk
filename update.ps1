@@ -22,7 +22,8 @@ $Log = 'C:\Data\kds-update.log'
 
 function L($m) { $l = "$(Get-Date -Format 'MM/dd/yyyy HH:mm:ss')  $m"; $l; try { $l | Out-File $Log -Append -Encoding utf8 } catch {} }
 function Fetch($path, $out) {
-  if ($Source -match '^https?://') { Invoke-WebRequest "$Source/$path" -OutFile $out -UseBasicParsing -TimeoutSec 30 }
+  # The query string skips GitHub's ~5 min raw cache, so a kiosk never installs the previous release right after a new one.
+  if ($Source -match '^https?://') { Invoke-WebRequest "$Source/${path}?t=$([DateTime]::UtcNow.Ticks)" -OutFile $out -UseBasicParsing -TimeoutSec 30 }
   else { Copy-Item (Join-Path $Source $path) $out }
 }
 function Ensure-Task($name, $script, $every) {
@@ -89,7 +90,7 @@ foreach ($t in @(Get-ScheduledTask -ErrorAction SilentlyContinue | Where-Object 
   Unregister-ScheduledTask $t.TaskName -Confirm:$false
   L "replaced old Roku task: $($t.TaskName)"
 }
-if (Test-Path "$Dir\roku.txt") { Ensure-Task 'KDS Roku Keep-Awake' "$Dir\roku-watch.ps1" (New-TimeSpan -Minutes 5) }
+if ((Test-Path "$Dir\roku.txt") -and (Test-Path "$Dir\roku-watch.ps1")) { Ensure-Task 'KDS Roku Keep-Awake' "$Dir\roku-watch.ps1" (New-TimeSpan -Minutes 5) }
 elseif (Get-ScheduledTask 'KDS Roku Keep-Awake' -ErrorAction SilentlyContinue) {
   Unregister-ScheduledTask 'KDS Roku Keep-Awake' -Confirm:$false; L 'removed Roku task (no roku.txt)'
 }

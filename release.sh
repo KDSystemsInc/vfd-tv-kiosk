@@ -6,7 +6,7 @@
 set -euo pipefail
 v=${1:?usage: release.sh <version, e.g. 1.2.1>}
 cd "$(dirname "$0")"
-FILES=(update.ps1 bulletin-watchdog.ps1 start-bulletin.ps1 suspended.html)
+FILES=(update.ps1 bulletin-watchdog.ps1 start-bulletin.ps1 suspended.html roku-watch.ps1)
 
 git add "${FILES[@]}"
 python3 - "$v" "${FILES[@]}" > manifest.json <<'EOF'

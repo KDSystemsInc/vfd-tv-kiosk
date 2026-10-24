@@ -6,7 +6,7 @@ Scripts for the RedNMX Bulletin TV kiosks. Kiosks install signed releases automa
 |---|---|
 | `update.ps1` | Every 6 h as SYSTEM: installs a new release if its signature and hashes check out; otherwise keeps the current one. Also keeps the tasks and Shell Launcher entry in place. |
 | `start-bulletin.ps1` | Shell Launcher wrapper: suspend check, wait for the DB, run the Bulletin. |
-| `bulletin-watchdog.ps1` | Every 5 min: restarts the Bulletin if it is stuck on "Could not connect" while the DB answers. |
+| `bulletin-watchdog.ps1` | Every 5 min: restarts the Bulletin when it is stuck on "Could not connect", its reconnect failed and never completed, or its log has gone silent for 45 min (hung). Warns once if a startup loaded the wrong profile. |
 | `roku-watch.ps1` | Every 5 min, only on kiosks with a Roku TV (`C:\ProgramData\KDSystems\roku.txt` holds its IP): wakes the TV and fixes input/screensaver, sending nothing when the TV is fine. |
 | `suspend.json` / `suspended.html` | Remote suspend switch and the page it shows. |
 | `offboard.ps1` | Removes everything above and restores the stock Bulletin launch. |
